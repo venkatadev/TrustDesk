@@ -38,9 +38,12 @@ def test_draft_uses_first_chunk_and_counts_attempt():
     assert update["attempts"] == 2
 
 
-def test_verify_rejects_first_draft_accepts_second():
-    assert verify(QuestionState(question="q", attempts=1)) == {"verified": False}
-    assert verify(QuestionState(question="q", attempts=2)) == {"verified": True}
+def test_verify_accepts_grounded_draft_and_rejects_invented_one():
+    chunks = ["Backups are encrypted at rest with AES-256."]
+    grounded = QuestionState(question="q", chunks=chunks, draft=chunks[0])
+    invented = QuestionState(question="q", chunks=chunks, draft="We hold ISO 27001 certification.")
+    assert verify(grounded) == {"verified": True}
+    assert verify(invented) == {"verified": False}
 
 
 @pytest.mark.parametrize(

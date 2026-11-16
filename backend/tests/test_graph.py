@@ -14,11 +14,23 @@ def run(app) -> QuestionState:
     return QuestionState(**app.invoke(QUESTION))
 
 
-def test_default_path_retries_once_then_ready():
+def test_default_path_first_draft_is_grounded_and_ready():
     final = build_graph().invoke(QUESTION)
     assert final["status"] == "ready"
     assert final["verified"] is True
-    assert final["attempts"] == 2  # first draft rejected, second accepted
+    assert final["attempts"] == 1  # stub draft copies the chunk, so it passes first time
+
+
+def test_ungrounded_first_draft_is_retried_then_ready(monkeypatch):
+    drafts = iter(["We hold ISO 27001 certification.", "Backups are encrypted with AES-256."])
+
+    def flaky_draft(state):
+        return {"draft": next(drafts), "attempts": state.attempts + 1}
+
+    monkeypatch.setattr(graph_module, "draft", flaky_draft)
+    final = build_graph().invoke(QUESTION)
+    assert final["status"] == "ready"
+    assert final["attempts"] == 2  # invented claim rejected, grounded retry accepted
 
 
 def test_library_hit_skips_retrieve_and_draft(monkeypatch):
